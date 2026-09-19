@@ -9,7 +9,7 @@ from shutil import copy2 as shutil_copy2
 # ----------------------------------------------------------------------------#
 from src.app.database import BookmarksDatabase as bmd
 from src.config import Config
-from src.logs import SmartLogger, get_smart_logger
+from src.logs import SmartLogger
 from src.utilities import Utilities as uts
 
 # ----------------------------------------------------------------------------#
@@ -18,7 +18,7 @@ from src.utilities import Utilities as uts
 
 
 class ApplicationService:
-    _log: SmartLogger = get_smart_logger()
+    _log: SmartLogger = SmartLogger()
 
     @classmethod
     def _save_db_in_data(cls, cfg: Config) -> str | None:

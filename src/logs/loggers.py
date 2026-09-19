@@ -35,20 +35,58 @@ class SmartLogger(LibLogger):
     """Logger с дополнительными возможностями форматирования и кастомными уровнями.
 
     Расширяет стандартный `logging.Logger`, добавляя:
+    * флаг `pretty` — вывод сообщения с упрощенным форматированием;
     * флаг `raw` — вывод сообщения без стандартного форматирования;
     * флаг `empty_console` — подавление вывода в консоль;
-    * флаг `pretty` — вывод сообщения с упрощенным форматированием;
     * метод `add_custom_level` для регистрации пользовательских уровней логирования.
     """
 
-    def __init__(self, name: str):
-        """Создает экземпляр SmartLogger.
+    def __new__(cls, name: str = "smart_logger", all_level: int = DEBUG) -> "SmartLogger":
+        """Возвращает существующий экземпляр SmartLogger с данным именем или создает новый.
+
+        Повторяет поведение `logging.getLogger`: при повторном вызове с тем же
+        `name` возвращается тот же самый (уже настроенный) экземпляр вместо
+        создания нового и повторной настройки обработчиков.
 
         Args:
             name: Имя logger.
+            all_level: Минимальный уровень логирования (используется только
+                при создании нового экземпляра, см. `__init__`).
+
+        Returns:
+            Экземпляр SmartLogger.
         """
 
+        existing = LibLogger.manager.loggerDict.get(name)
+        return existing if isinstance(existing, SmartLogger) else super().__new__(cls)
+
+    def __init__(self, name: str = "smart_logger", all_level: int = DEBUG):
+        """Создает и настраивает экземпляр SmartLogger.
+
+        Если logger с указанным именем уже существовал (например, был создан
+        ранее вызовом `SmartLogger(name)` или `logging.getLogger(name)`),
+        повторная инициализация и настройка обработчиков не выполняются —
+        `__new__` в этом случае уже вернул готовый экземпляр.
+
+        Args:
+            name: Имя logger.
+            all_level: Минимальный уровень логирования для базовой
+                конфигурации (консоль + файлы, см. `_basic_configuration`).
+        """
+
+        if self.__dict__.get("_smart_logger_initialized", False):
+            return
+
         super().__init__(name=name)
+
+        self.manager = LibLogger.manager
+        self.manager.loggerDict[name] = self
+        self.manager._fixupParents(self)
+
+        self._smart_logger_initialized = True
+
+        if not self.handlers:
+            self._basic_configuration(all_level=all_level)
 
     def __str__(self) -> str:
         """Возвращает строковое представление доступных уровней логирования."""
@@ -88,6 +126,43 @@ class SmartLogger(LibLogger):
             extra["empty_console"] = empty_console
         return extra
 
+    def _basic_configuration(self, all_level: int = DEBUG) -> None:
+        """Выполняет базовую настройку SmartLogger.
+
+        Настраивает:
+        * уровень logger;
+        * консольный обработчик;
+        * файловые обработчики для уровней DEBUG, INFO, WARNING, ERROR, CRITICAL;
+        * общий файловый лог для всех уровней, начиная с `all_level`.
+
+        Args:
+            logger: Экземпляр SmartLogger для настройки.
+            all_level: Минимальный уровень логирования для консоли и общего файла.
+
+        Returns:
+            Настроенный экземпляр SmartLogger.
+        """
+
+        self.setLevel(level=all_level)
+        self.propagate = False
+
+        # Console
+        add_handler(logger=self, level=all_level)
+
+        # File
+        makedirs(name="logs", exist_ok=True)
+        add_handler(logger=self, level=DEBUG, filename="logs/logs_debug.log", exact=True)
+        add_handler(logger=self, level=INFO, filename="logs/logs_info.log", exact=True)
+        add_handler(
+            logger=self, level=WARNING, filename="logs/logs_warning.log", exact=True
+        )
+        add_handler(logger=self, level=ERROR, filename="logs/logs_error.log", exact=True)
+        add_handler(
+            logger=self, level=CRITICAL, filename="logs/logs_critical.log", exact=True
+        )
+
+        add_handler(logger=self, level=all_level, filename="logs/logs_all_levels.log")
+    
     def debug(
         self,
         msg: Any,
@@ -505,66 +580,6 @@ def add_handler(
     logger.addHandler(handler)
 
 
-def basic_configuration(logger: SmartLogger, all_level: int = DEBUG) -> SmartLogger:
-    """Выполняет базовую настройку SmartLogger.
-
-    Настраивает:
-    * уровень logger;
-    * консольный обработчик;
-    * файловые обработчики для уровней DEBUG, INFO, WARNING, ERROR, CRITICAL;
-    * общий файловый лог для всех уровней, начиная с `all_level`.
-
-    Args:
-        logger: Экземпляр SmartLogger для настройки.
-        all_level: Минимальный уровень логирования для консоли и общего файла.
-
-    Returns:
-        Настроенный экземпляр SmartLogger.
-    """
-
-    logger.setLevel(level=all_level)
-    logger.propagate = False
-
-    # Console
-    add_handler(logger=logger, level=all_level)
-
-    # File
-    makedirs(name="logs", exist_ok=True)
-    add_handler(logger=logger, level=DEBUG, filename="logs/logs_debug.log", exact=True)
-    add_handler(logger=logger, level=INFO, filename="logs/logs_info.log", exact=True)
-    add_handler(
-        logger=logger, level=WARNING, filename="logs/logs_warning.log", exact=True
-    )
-    add_handler(logger=logger, level=ERROR, filename="logs/logs_error.log", exact=True)
-    add_handler(
-        logger=logger, level=CRITICAL, filename="logs/logs_critical.log", exact=True
-    )
-
-    add_handler(logger=logger, level=all_level, filename="logs/logs_all_levels.log")
-    return logger
-
-
-def get_smart_logger(name: str = "smart_logger", all_level: int = DEBUG) -> SmartLogger:
-    """Возвращает настроенный экземпляр SmartLogger.
-
-    Если logger с указанным именем еще не имеет обработчиков,
-    к нему применяется `basic_configuration`.
-
-    Args:
-        name: Имя logger.
-        all_level: Минимальный уровень логирования для базовой конфигурации.
-
-    Returns:
-        Экземпляр SmartLogger с установленными обработчиками.
-    """
-
-    logger: SmartLogger = libGetLogger(name=name)
-    if not logger.handlers:
-        basic_configuration(logger=logger, all_level=all_level)
-    return logger
-
-
-libSetLoggerClass(SmartLogger)
 basic_format: str = (
     "{asctime} | {levelname} | "
     "{filename} -> {funcName}: line {lineno} | "
