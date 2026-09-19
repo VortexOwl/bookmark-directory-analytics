@@ -1,4 +1,4 @@
 # ----------------------------------------------------------------------------#
 # Project modules                                                             #
 # ----------------------------------------------------------------------------#
-from logs.loggers import SmartLogger, get_smart_logger
+from logs.loggers import SmartLogger
