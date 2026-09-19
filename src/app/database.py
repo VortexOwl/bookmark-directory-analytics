@@ -7,7 +7,7 @@ from aiosqlite import Connection, connect
 # Project modules                                                             #
 # ----------------------------------------------------------------------------#
 from src.config import Config
-from src.logs import SmartLogger, get_smart_logger
+from src.logs import SmartLogger
 
 # ----------------------------------------------------------------------------#
 # Application code                                                            #
@@ -15,7 +15,7 @@ from src.logs import SmartLogger, get_smart_logger
 
 
 class BookmarksDatabase:
-    _log: SmartLogger = get_smart_logger()
+    _log: SmartLogger = SmartLogger()
     _ALLOWED_COLUMNS: set = {"id", "id, title", "guid, title"}
 
     @classmethod
@@ -27,8 +27,8 @@ class BookmarksDatabase:
         bookmarks_folder: str = cfg.bookmarks_folder
 
         conn = await connect(cfg.path_data_folder)
-        cls._log.debug(msg="Подключение к БД прошло успешно.")
-        cls._log.info(msg=f'Начата проверка закладок папки "{bookmarks_folder}"')
+        cls._log.debug(msg="Подключение к БД прошло успешно.", pretty=True)
+        cls._log.info(msg=f'Начата проверка закладок папки "{bookmarks_folder}"', pretty=True)
         return conn
 
     @classmethod
@@ -146,11 +146,11 @@ class BookmarksDatabase:
                     cfg=cfg, conn=conn, id_initial_folder=initial_folder[0]
                 )
             else:
-                cls._log.warning(msg=f'Папка "{bookmarks_folder}" не найдена')
+                cls._log.warning(msg=f'Папка "{bookmarks_folder}" не найдена', pretty=True)
 
         finally:
             if conn is not None:
                 await conn.close()
-                cls._log.debug(msg="Соединение с БД было закрыто.")
+                cls._log.debug(msg="Соединение с БД было закрыто.", pretty=True)
 
         return result_check

@@ -9,7 +9,7 @@ from pathlib import Path
 # ----------------------------------------------------------------------------#
 # Project modules                                                             #
 # ----------------------------------------------------------------------------#
-from logs import get_smart_logger
+from logs import SmartLogger
 
 # ----------------------------------------------------------------------------#
 # Application code                                                            #
@@ -18,7 +18,7 @@ from logs import get_smart_logger
 
 @dataclass
 class Utilities:
-    _log = get_smart_logger()
+    _log = SmartLogger()
 
     @staticmethod
     def read_file_line_by_line(file_path: Path, encoding="utf-8") -> Iterator[str]:
