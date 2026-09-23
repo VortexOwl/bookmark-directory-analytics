@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>📑 Анализ директории закладок</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+<body>
+    <main class="container">
+        <h1>📑 Анализ директории закладок</h1>
+
+        <form method="get" action="/directory-analytics/report">
+            <label for="bookmarks_folder">
+                🏙️ Директория закладок.
+            </label>
+            <input
+                type="text"
+                id="bookmarks_folder"
+                name="bookmarks folder"
+                placeholder="например: KDE Store"
+            >
+
+            <label for="saving_file">
+                💾 Сохранить результат в файл?
+            </label>
+            <select id="saving_file" name="saving file">
+                <option value="❌ Нет">Нет</option>
+                <option value="✔️ Да">Да</option>
+            </select>
+
+            <button type="submit">Провести анализ директории</button>
+
+        </form>
+        <button onclick="window.location.href='/cleanup'">Очистить папку отчетов</button>
+        <button onclick="window.location.href='/config'">Настроить конфигурацию</button>
+        <button onclick="window.location.href='/shutdown'">Остановить сервер приложения</button>
+    </main>
+</body>
+</html>
