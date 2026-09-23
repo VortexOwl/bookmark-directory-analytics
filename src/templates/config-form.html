@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>⚙️ Конфигурация</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+<body>
+    <main class="container">
+        <h1>⚙️ Конфигурация</h1>
+
+        <form method="post" action="/config">
+            <label for="is_default">
+                📜 Установить значения по умолчанию.
+                <br>
+                📜 Если выбрано "Да", то игнорируются все следующие пункты.
+            </label>
+            <select id="is_default" name="is default">
+                <option value="❌ Нет">Нет</option>
+                <option value="✔️ Да">Да</option>
+            </select>
+
+            <label for="browser">
+                🌎 Браузер.
+            </label>
+            <select id="browser" name="browser">
+                <option value="Floorp">Floorp</option>
+            </select>
+
+            <label for="bookmarks_folder">
+                🏙️ Директория закладок.
+            </label>
+            <input
+                type="text"
+                id="bookmarks_folder"
+                name="bookmarks folder"
+                placeholder="например: KDE Store"
+            >
+
+            <label for="custom_browser_profile">
+                🪪 Кастомный профиль браузера.
+            </label>
+            <input
+                type="text"
+                id="custom_browser_profile"
+                name="custom browser profile"
+            >
+
+            <label for="name_report_file">
+                📁 Название файла репорта.
+            </label>
+            <input
+                type="text"
+                id="name_report_file"
+                name="name report file"
+            >
+
+            <button type="submit">Сохранить настройки</button>
+
+        </form>
+        <button onclick="window.location.href='/directory-analytics/new'">Вернуться к анализу</button>
+        <button onclick="window.location.href='/shutdown'">Остановить сервер приложения</button>
+    </main>
+</body>
+</html>
