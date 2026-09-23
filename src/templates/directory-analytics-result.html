@@ -2,12 +2,12 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Результат поиска слов</title>
+    <title>📑 Результат анализа</title>
     <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
 </head>
 <body>
     <main class="container">
-        <h1>Результат анализа директории {{ name_folder }}</h1>
+        <h1>📑 Результат анализа директории {{ name_folder }}</h1>
         {% if report %}
         <pre>{{ report }}</pre>
         {% else %}
