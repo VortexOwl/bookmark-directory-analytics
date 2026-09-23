@@ -2,13 +2,13 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Очистка отчётов</title>
+    <title>⚙️ Очистка отчётов</title>
     <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
 </head>
 <body>
     <main class="container">
         {% if not report %}
-            <h1>Очистка папки отчётов</h1>
+            <h1>⚙️ Очистка папки отчётов</h1>
 
             <p>Нажмите кнопку, для очистки файлов из папки отчётов.</p>
 
@@ -16,7 +16,7 @@
                 <button type="submit">Очистить папку</button>
             </form>
         {% else %}
-            <h1>Результат очистки папки отчетов сервиса поиска слов</h1>
+            <h1>⚙️ Результат очистки</h1>
 
             <p>Успех: {{ report.success }}</p>
             <p>Ошибки: {{ report.errors }}</p>
