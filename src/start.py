@@ -9,23 +9,37 @@ from asyncio import run as async_run
 from utilities.basic_utilities_project import add_workdir_in_PATH
 
 add_workdir_in_PATH()
-from src.app import ApplicationService
+from src.app import ApplicationService as app
 
 # ----------------------------------------------------------------------------#
 # Application code                                                            #
 # ----------------------------------------------------------------------------#
 
+app_report = app.ReportService()
+app_clear = app.ClearReportService()
+
 
 def start() -> None:
-    """Точка входа: запускает асинхронное сохранение отчёта по закладкам."""
+    """
+    Запускает формирование и сохранение отчёта по закладкам.
 
-    async_run(ApplicationService.save_bookmarks_report(is_save_file=True))
+    Notes:
+        Функция является точкой входа и запускает асинхронную операцию
+        формирования отчёта с сохранением результата в файл.
+    """
+    async_run(app_report.generate_report(is_save_file=True))
 
 
 def start_clear() -> None:
-    """Точка входа: запускает асинхронное очищение от файлов директории для формирования отчётов."""
+    """
+    Запускает очистку директории с отчётами от файлов.
 
-    async_run(ApplicationService.clear_report_files())
+    Notes:
+        Функция является точкой входа и запускает асинхронную операцию
+        очистки директории для хранения отчётов.
+    """
+
+    async_run(app_clear.clear_report_directory())
 
 
 if __name__ == "__main__":

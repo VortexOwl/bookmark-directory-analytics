@@ -58,8 +58,12 @@ class Config(BaseSettings):
     report_folder: str = "docs"
 
     @property
-    def path_data_folder(self) -> Path:
-        return Path(self.data_folder) / self.database_file
+    def patch_data_folder(self) -> Path:
+        return Path(self.data_folder)
+
+    @property
+    def path_data_file(self) -> Path:
+        return self.patch_data_folder / self.database_file
 
     @property
     def report_file(self) -> str:
@@ -68,6 +72,14 @@ class Config(BaseSettings):
             if self.custom_report_file is None
             else self.custom_report_file
         )
+
+    @property
+    def path_report_folder(self) -> Path:
+        return Path(self.report_folder)
+
+    @property
+    def path_report_file(self) -> Path:
+        return self.path_report_folder / f"{self.report_file}.txt"
 
     @property
     def is_docker(self) -> bool:

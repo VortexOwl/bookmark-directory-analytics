@@ -25,9 +25,9 @@ from fastapi.responses import (
     RedirectResponse,
     Response,
 )
-from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from uvicorn import run as uvicorn_run
 
 # ----------------------------------------------------------------------------#
@@ -44,6 +44,8 @@ from src.logs import SmartLogger
 cfg = Config()
 log: SmartLogger = SmartLogger()
 log.setLevel(cfg.log_level)
+app_report = app.ReportService()
+app_clear = app.ClearReportService()
 templates = Jinja2Templates(directory="src/templates")
 
 
@@ -108,6 +110,7 @@ class Browser(str, Enum):
     """
     Поддерживаемые браузеры, из которых извлекаются закладки.
     """
+
     FLOORP = "Floorp"
 
 
@@ -115,6 +118,7 @@ class IsYesOrNo(str, Enum):
     """
     Перечисление вариантов ответа «да» или «нет».
     """
+
     YES = "✔️ Да"
     NO = "❌ Нет"
 
@@ -144,37 +148,37 @@ class WebConfig(BaseModel):
             IsYesOrNo,
             Form(
                 alias="is default",
-                description="📜 Установить значения по умолчанию", 
-                examples=[IsYesOrNo.NO]
+                description="📜 Установить значения по умолчанию",
+                examples=[IsYesOrNo.NO],
             ),
         ],
         browser: Annotated[
-            Browser, Form(
-                alias="browser",
-                description="🌎 Браузер", 
-                examples=[Browser.FLOORP]
-            ),
+            Browser,
+            Form(alias="browser", description="🌎 Браузер", examples=[Browser.FLOORP]),
         ],
         bookmarks_folder: Annotated[
-            str, Form(
+            str,
+            Form(
                 alias="bookmarks folder",
-                description="🏙️ Директория закладок", 
-                examples=[""]
-                ),
+                description="🏙️ Директория закладок",
+                examples=[""],
+            ),
         ] = None,
         browser_profile: Annotated[
-            str, Form(
+            str,
+            Form(
                 alias="custom browser profile",
-                description="🪪 Кастомный профиль браузера", 
-                examples=[""]
-                ),
+                description="🪪 Кастомный профиль браузера",
+                examples=[""],
+            ),
         ] = None,
         custom_report_file: Annotated[
-            str, Form(
+            str,
+            Form(
                 alias="name report file",
                 description="📁 Название файла репорта",
-                examples=[""]
-                ),
+                examples=[""],
+            ),
         ] = None,
     ) -> WebConfig:
         """
@@ -249,7 +253,7 @@ async def shutdown(request: Request) -> Response:
 @web.get("/cleanup", include_in_schema=False)
 async def get_cleanup(request: Request) -> Response:
     """
-     Отображает HTML-форму очистки папки отчётов.
+    Отображает HTML-форму очистки папки отчётов.
 
     Args:
         request: Текущий HTTP-запрос.
@@ -282,7 +286,7 @@ async def post_cleanup(request: Request) -> Response:
         HTML-страница с отчётом об очистке или JSON-ответ со сводкой
         операции.
     """
-    report = await app.clear_report_files(cfg=cfg)
+    report = await app_clear.clear_report_directory()
     if "text/html" in request.headers.get("accept", ""):
         report["pretty json"] = json_dumps(report, indent=2, ensure_ascii=False)
         context = {
@@ -444,8 +448,8 @@ async def get_report(
         msg=f"Начат анализ закладок браузера в папке: {copy_cfg.bookmarks_folder}.",
         pretty=True,
     )
-    bookmarks_report, report_path, err = await app.save_bookmarks_report(
-        is_save_file, copy_cfg
+    bookmarks_report, report_path, err = await app_report.generate_report(
+        is_save_file=is_save_file, cfg=copy_cfg
     )
     if err is not None:
         if err == "По указанному пути отсутствует файл базы данных закладок.":
@@ -476,9 +480,9 @@ async def get_report(
 
     if "text/html" in request.headers.get("accept", ""):
         context = {
-                "name_folder": copy_cfg.bookmarks_folder,
-                "report": bookmarks_report,
-            }
+            "name_folder": copy_cfg.bookmarks_folder,
+            "report": bookmarks_report,
+        }
         return templates.TemplateResponse(
             request=request,
             name="directory-analytics-result.html",
