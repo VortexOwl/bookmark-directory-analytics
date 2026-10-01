@@ -19,8 +19,9 @@ from src.utilities import Utilities as uts
 
 class ApplicationService:
     class ClearReportService:
-        """Очищает директорию для хранения отчетов от файлов."""
-
+        """
+        Очищает директорию для хранения отчетов от файлов.
+        """
         def __init__(self, cfg: Config | None = None):
             """
             Инициализирует сервис удаления отчётов.
@@ -42,8 +43,9 @@ class ApplicationService:
             return await uts.clearing_folder(clear_folder=self._cfg.report_folder)
 
     class ReportService:
-        """Формирует отчёты по закладкам."""
-
+        """
+        Формирует отчёты по закладкам.
+        """
         def __init__(
             self,
             bmd: BookmarksDatabase | None = None,
