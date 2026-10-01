@@ -8,9 +8,6 @@ from contextlib import asynccontextmanager
 from copy import copy
 from enum import Enum
 from json import dumps as json_dumps
-from os import getpid as os_getpid
-from os import kill as os_kill
-from signal import SIGINT as signal_SIGINT
 from typing import Annotated
 from webbrowser import open as web_open
 
@@ -28,7 +25,8 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from uvicorn import run as uvicorn_run
+from uvicorn import Config as UvicornConfig
+from uvicorn import Server as UvicornServer
 
 # ----------------------------------------------------------------------------#
 # Project modules                                                             #
@@ -47,6 +45,15 @@ log.setLevel(cfg.log_level)
 app_report = app.ReportService()
 app_clear = app.ClearReportService()
 templates = Jinja2Templates(directory="src/templates")
+sc: ServerConfig = ServerConfig()
+uvicorn_config: UvicornConfig = UvicornConfig(
+    f"{__name__}:web",
+    host=sc.host,
+    port=sc.port,
+    reload=sc.is_reload,
+    access_log=sc.access_log,
+)
+uvicorn_server: UvicornServer = UvicornServer(uvicorn_config)
 
 
 async def open_browser() -> None:
@@ -54,7 +61,10 @@ async def open_browser() -> None:
     Открывает веб-интерфейс приложения в браузере.
 
     Функция ожидает запуска сервера, после чего открывает URL приложения
-    в системном браузере. Используется только при запуске не в Docker-контейнере.
+    в системном браузере.
+
+    Notes:
+        Используется только при запуске вне Docker-контейнера.
     """
     sc = ServerConfig()
     await a_sleep(1.5)
@@ -63,7 +73,7 @@ async def open_browser() -> None:
 
 
 @asynccontextmanager
-async def lifespan(web: FastAPI) -> None:
+async def lifespan(web: FastAPI):
     """
     Управляет жизненным циклом FastAPI-приложения.
 
@@ -157,7 +167,7 @@ class WebConfig(BaseModel):
             Form(alias="browser", description="🌎 Браузер", examples=[Browser.FLOORP]),
         ],
         bookmarks_folder: Annotated[
-            str,
+            str | None,
             Form(
                 alias="bookmarks folder",
                 description="🏙️ Директория закладок",
@@ -165,7 +175,7 @@ class WebConfig(BaseModel):
             ),
         ] = None,
         browser_profile: Annotated[
-            str,
+            str | None,
             Form(
                 alias="custom browser profile",
                 description="🪪 Кастомный профиль браузера",
@@ -173,7 +183,7 @@ class WebConfig(BaseModel):
             ),
         ] = None,
         custom_report_file: Annotated[
-            str,
+            str | None,
             Form(
                 alias="name report file",
                 description="📁 Название файла репорта",
@@ -233,7 +243,7 @@ async def shutdown(request: Request) -> Response:
     Returns:
         HTML-страница или JSON-ответ с подтверждением отправки сигнала.
     """
-    os_kill(os_getpid(), signal_SIGINT)
+    uvicorn_server.should_exit = True
     log.info(msg="Запрос на остановку сервера отправлен...", pretty=True)
     if "text/html" in request.headers.get("accept", ""):
         return templates.TemplateResponse(
@@ -408,7 +418,7 @@ async def get_report(
         ),
     ],
     bookmarks_folder: Annotated[
-        str,
+        str | None,
         Query(
             alias="bookmarks folder",
             description="🏙️ Директория закладок",
@@ -496,11 +506,15 @@ def web_start() -> None:
     """
     Запускает FastAPI-приложение с помощью Uvicorn.
 
-    Параметры хоста, порта и режима перезагрузки считываются
-    из конфигурации приложения.
+    Параметры хоста, порта, режима перезагрузки и журнала доступа
+    считываются из конфигурации приложения.
     """
-    sc = ServerConfig()
-    uvicorn_run(f"{__name__}:web", host=sc.host, port=sc.port, reload=sc.is_reload)
+    try:
+        uvicorn_server.run()
+    except KeyboardInterrupt:
+        log.debug(
+            "🛑 Сервер остановлен пользователем через `Ctrl+Shift+C`.", pretty=True
+        )
 
 
 if __name__ == "__main__":
