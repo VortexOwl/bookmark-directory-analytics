@@ -372,7 +372,6 @@ async def update_config(
     Returns:
         HTML-страница с результатом сохранения или JSON-ответ с конфигурацией.
     """
-    global cfg
     if web_config.is_default == IsYesOrNo.YES:
         default_cfg = Config()
         cfg.browser = default_cfg.browser
@@ -380,17 +379,29 @@ async def update_config(
         cfg.custom_name_browser_profile = default_cfg.custom_name_browser_profile
         cfg.custom_name_report_file = default_cfg.custom_name_report_file
         web_config = WebConfig()
-        web_config.is_default = True
+        log.info(msg="Установлены настройки по умолчанию", pretty=True)
     else:
-        web_config.is_default = False
         if web_config.browser:
             cfg.browser = web_config.browser.value
+            log.info(msg=f'Выбран браузер "{web_config.browser.value}".', pretty=True)
         if web_config.bookmarks_folder:
             cfg.bookmarks_folder = web_config.bookmarks_folder
+            log.info(
+                msg=f'Выбрана папка закладок "{web_config.bookmarks_folder}".',
+                pretty=True,
+            )
         if web_config.browser_profile:
             cfg.custom_name_browser_profile = web_config.browser_profile
+            log.info(
+                msg=f'Установлен профиль браузера "{web_config.browser_profile}".',
+                pretty=True,
+            )
         if web_config.custom_report_file:
             cfg.custom_name_report_file = web_config.custom_report_file
+            log.info(
+                msg=f'Для файла отчета установлено название "{web_config.custom_report_file}".',
+                pretty=True,
+            )
     if "text/html" in request.headers.get("accept", ""):
         return template_renderer.TemplateResponse(
             request=request,
