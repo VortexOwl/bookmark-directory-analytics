@@ -482,7 +482,6 @@ async def get_report(
 
     if bookmarks_folder:
         copy_cfg.bookmarks_folder = bookmarks_folder
-        copy_cfg.custom_name_report_file = None
 
     log.info(
         msg=f"Начат анализ закладок браузера в папке: {copy_cfg.bookmarks_folder}.",
