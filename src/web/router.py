@@ -129,8 +129,8 @@ class IsYesOrNo(str, Enum):
     Перечисление вариантов ответа «да» или «нет».
     """
 
-    YES = "✔️ Да"
-    NO = "❌ Нет"
+    YES = "Да"
+    NO = "Нет"
 
 
 class WebConfig(BaseModel):
@@ -318,7 +318,7 @@ async def post_cleanup(request: Request) -> Response:
     )
 
 
-@web.get("/config", include_in_schema=False)
+@web.get("/update-config", include_in_schema=False)
 async def get_config(request: Request) -> Response:
     """
      Отображает HTML-форму конфигурации сервиса анализа директории закладок.
@@ -337,12 +337,12 @@ async def get_config(request: Request) -> Response:
 
 
 @web.post(
-    "/config",
+    "/update-config",
     description="Задает конфигурацию для утилиты анализа закладок браузера.",
     tags=["⚙️ Конфигурация"],
     summary="Задать конфигурацию",
 )
-async def post_config(
+async def update_config(
     request: Request,
     web_config: Annotated[WebConfig, Depends(WebConfig.web_config_form)],
 ) -> Response:
@@ -452,7 +452,7 @@ async def get_report(
 
     if bookmarks_folder:
         copy_cfg.bookmarks_folder = bookmarks_folder
-        copy_cfg.custom_report_file = None
+        copy_cfg.custom_name_report_file = None
 
     log.info(
         msg=f"Начат анализ закладок браузера в папке: {copy_cfg.bookmarks_folder}.",
@@ -502,7 +502,7 @@ async def get_report(
     return PlainTextResponse(content=bookmarks_report, status_code=status.HTTP_200_OK)
 
 
-def web_start() -> None:
+def start_web_server() -> None:
     """
     Запускает FastAPI-приложение с помощью Uvicorn.
 
@@ -518,4 +518,4 @@ def web_start() -> None:
 
 
 if __name__ == "__main__":
-    web_start()
+    start_web_server()

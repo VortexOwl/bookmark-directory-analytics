@@ -65,8 +65,8 @@ class Config(BaseSettings):
         bookmarks_folder: Название каталога с закладками.
         browser: Название браузера.
         browser_folder: Название каталога браузера в домашней директории.
-        browser_profile: Имя пользовательского профиля браузера.
-        custom_report_file: Пользовательское имя файла отчёта.
+        custom_name_browser_profile: Имя пользовательского профиля браузера.
+        custom_name_report_file: Пользовательское имя файла отчёта.
         database_file: Имя файла базы данных браузера.
         data_folder: Название каталога для данных приложения.
         report_folder: Название каталога для отчётов.
@@ -74,12 +74,12 @@ class Config(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="APP_")
     log_level: int = 10
     is_open_webbrowser: bool = True
-    _default_profile_pattern: str = "*.default-default"
+    _default_profile_pattern: str = "*.default*"
     bookmarks_folder: str = "KDE Store"
     browser: str = "Floorp"
     browser_folder: str = ".floorp"
-    browser_profile: str | None = None
-    custom_report_file: str | None = None
+    custom_name_browser_profile: str | None = None
+    custom_name_report_file: str | None = None
     database_file: str = "places.sqlite"
     data_folder: str = "data"
     report_folder: str = "docs"
@@ -105,7 +105,7 @@ class Config(BaseSettings):
         return self.patch_data_folder / self.database_file
 
     @property
-    def report_file_name(self) -> str:
+    def name_report_file(self) -> str:
         """
         Возвращает имя файла отчёта без расширения.
 
@@ -114,8 +114,8 @@ class Config(BaseSettings):
         """
         return (
             f"Bookmarks {self.bookmarks_folder}"
-            if self.custom_report_file is None
-            else self.custom_report_file
+            if self.custom_name_report_file is None
+            else self.custom_name_report_file
         )
 
     @property
@@ -136,7 +136,7 @@ class Config(BaseSettings):
         Returns:
             Путь к файлу отчёта.
         """
-        return self.path_report_folder / f"{self.report_file_name}.txt"
+        return self.path_report_folder / f"{self.name_report_file}.txt"
 
     @property
     def is_docker(self) -> bool:
@@ -149,22 +149,23 @@ class Config(BaseSettings):
         return Path("/.dockerenv").exists()
 
     @property
-    def path_source_database(self) -> Path | None:
+    def path_browser_profile(self) -> Path | None:
         """
-        Возвращает путь к исходной базе данных браузера.
+        Возвращает путь к профилю браузера.
 
-        Путь определяется по операционной системе и профилю браузера.
+        Путь определяется в зависимости от операционной системы и настроек
+        браузера. Если пользовательский профиль не задан, используется первый
+        найденный профиль, соответствующий шаблону профиля по умолчанию.
 
         Returns:
-            Путь к базе данных браузера или ``None``, если операционная
-            система не поддерживается или профиль не найден.
+            Путь к профилю браузера или ``None``, если операционная система
+            не поддерживается либо профиль не найден.
         """
         sys_name = system()
         path_user: Path = Path.home()
         path_browser: Path = Path(self.browser)
         path_browser_folder: Path = Path(self.browser_folder)
         path_profiles: Path
-        path_profile_bookmarks: Path
 
         if sys_name == "Windows":
             path_browser = Path("AppData") / "Roaming" / path_browser / "Profiles"
@@ -175,19 +176,27 @@ class Config(BaseSettings):
 
         path_profiles = path_user / path_browser
 
-        if self.browser_profile is not None:
-            path_profile_bookmarks = path_profiles / self.browser_profile
-        else:
-            default_profile: Path = next(
-                (
-                    d
-                    for d in path_profiles.glob(self._default_profile_pattern)
-                    if d.is_dir()
-                ),
-                None,
-            )
-            if default_profile is None:
-                return None
-            path_profile_bookmarks = default_profile
+        if self.custom_name_browser_profile is not None:
+            return path_profiles / self.custom_name_browser_profile
 
-        return path_profile_bookmarks / self.database_file
+        default_profile: Path = next(
+            (
+                d
+                for d in path_profiles.glob(self._default_profile_pattern)
+                if d.is_dir()
+            ),
+            None,
+        )
+        return default_profile
+
+    @property
+    def path_source_database(self) -> Path | None:
+        """
+        Возвращает путь к исходной базе данных браузера.
+
+        Путь определяется по операционной системе и профилю браузера.
+
+        Returns:
+            Путь к базе данных браузера.
+        """
+        return self.path_browser_profile / self.database_file
