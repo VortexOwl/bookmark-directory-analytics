@@ -17,22 +17,22 @@
                 type="text"
                 id="bookmarks_folder"
                 name="bookmarks folder"
-                placeholder="например: KDE Store"
+                placeholder="например: {{ bookmarks_folder }}"
             >
 
             <label for="saving_file">
                 💾 Сохранить результат в файл?
             </label>
             <select id="saving_file" name="saving file">
-                <option value="❌ Нет">Нет</option>
-                <option value="✔️ Да">Да</option>
+                <option value="Нет">Нет</option>
+                <option value="Да">Да</option>
             </select>
 
             <button type="submit">Провести анализ директории</button>
 
         </form>
         <button onclick="window.location.href='/cleanup'">Очистить папку отчетов</button>
-        <button onclick="window.location.href='/config'">Настроить конфигурацию</button>
+        <button onclick="window.location.href='/update-config'">Настроить конфигурацию</button>
         <button onclick="window.location.href='/shutdown'">Остановить сервер приложения</button>
     </main>
 </body>

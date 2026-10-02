@@ -91,3 +91,22 @@ class Utilities:
         )
         cls._log.debug(msg=f"Сводка выполнения очистки:\n{stats}", pretty=True)
         return stats
+
+    @staticmethod
+    def resource_path(relative_path: str | Path) -> Path:
+        """
+        Возвращает абсолютный путь к ресурсу приложения.
+
+        Args:
+            relative_path: Относительный путь к ресурсу от корневой
+                директории проекта или каталога собранного приложения.
+
+        Returns:
+            Абсолютный путь к ресурсу.
+        """
+        if getattr(sys, "frozen", False):
+            base_path = Path(sys._MEIPASS)
+        else:
+            base_path = Path(__file__).resolve().parents[2]
+
+        return base_path / relative_path

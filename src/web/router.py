@@ -149,23 +149,15 @@ class WebConfig(BaseModel):
     bookmarks_folder: str | None = None
     browser_profile: str | None = None
     custom_report_file: str | None = None
-    is_default: IsYesOrNo | bool = IsYesOrNo.NO
+    is_default: IsYesOrNo = IsYesOrNo.NO
 
     @classmethod
     async def web_config_form(
         cls,
-        is_default: Annotated[
-            IsYesOrNo,
-            Form(
-                alias="is default",
-                description="📜 Установить значения по умолчанию",
-                examples=[IsYesOrNo.NO],
-            ),
-        ],
         browser: Annotated[
             Browser,
             Form(alias="browser", description="🌎 Браузер", examples=[Browser.FLOORP]),
-        ],
+        ] = Browser.FLOORP,
         bookmarks_folder: Annotated[
             str | None,
             Form(
@@ -190,6 +182,7 @@ class WebConfig(BaseModel):
                 examples=[""],
             ),
         ] = None,
+        is_default: Annotated[IsYesOrNo, Form(alias="is default")] = IsYesOrNo.NO,
     ) -> WebConfig:
         """
         Создаёт конфигурацию из данных HTML-формы.
@@ -209,7 +202,7 @@ class WebConfig(BaseModel):
             bookmarks_folder=bookmarks_folder,
             browser_profile=browser_profile,
             custom_report_file=custom_report_file,
-            is_default=is_default,
+            is_default=is_default or IsYesOrNo.NO,
         )
 
 
@@ -296,7 +289,12 @@ async def post_cleanup(request: Request) -> Response:
         HTML-страница с отчётом об очистке или JSON-ответ со сводкой
         операции.
     """
-    report = await app_clear.clear_report_directory()
+    path_report_folder = cfg.path_report_folder
+    if path_report_folder.exists():
+        report = await app_clear.cleanup()
+    else:
+        report = {"success": 0, "errors": 0, "names of errors": ()}
+        log.debug(msg=f"Сводка выполнения очистки:\n{report}", pretty=True)
     if "text/html" in request.headers.get("accept", ""):
         report["pretty json"] = json_dumps(report, indent=2, ensure_ascii=False)
         context = {
@@ -329,8 +327,14 @@ async def get_config(request: Request) -> Response:
     Returns:
         HTML-страница с формой конфигурации анализа директории закладок.
     """
-    return templates.TemplateResponse(
+    name_report_file = cfg.custom_name_report_file or cfg.name_report_file
+    context = {
+        "bookmarks_folder": cfg.bookmarks_folder,
+        "name_report_file": name_report_file,
+        "browser_profile": cfg.path_browser_profile,
+    }
         request=request,
+        context=context,
         name="config-form.html",
         status_code=status.HTTP_200_OK,
     )
@@ -394,8 +398,9 @@ async def new_analytics(request: Request) -> Response:
     Returns:
         HTML-страница с формой параметров поиска.
     """
-    return templates.TemplateResponse(
+    context = {"bookmarks_folder": cfg.bookmarks_folder}
         request=request,
+        context=context,
         name="directory-analytics-form.html",
         status_code=status.HTTP_200_OK,
     )

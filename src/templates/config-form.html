@@ -9,17 +9,7 @@
     <main class="container">
         <h1>⚙️ Конфигурация</h1>
 
-        <form method="post" action="/config">
-            <label for="is_default">
-                📜 Установить значения по умолчанию.
-                <br>
-                📜 Если выбрано "Да", то игнорируются все следующие пункты.
-            </label>
-            <select id="is_default" name="is default">
-                <option value="❌ Нет">Нет</option>
-                <option value="✔️ Да">Да</option>
-            </select>
-
+        <form method="post" action="/update-config">
             <label for="browser">
                 🌎 Браузер.
             </label>
@@ -34,29 +24,36 @@
                 type="text"
                 id="bookmarks_folder"
                 name="bookmarks folder"
-                placeholder="например: KDE Store"
+                placeholder="например: {{ bookmarks_folder }}"
             >
 
             <label for="custom_browser_profile">
-                🪪 Кастомный профиль браузера.
+                📂 Путь к профилю браузера.
             </label>
             <input
                 type="text"
                 id="custom_browser_profile"
                 name="custom browser profile"
+                placeholder="например: {{ browser_profile }}"
             >
 
             <label for="name_report_file">
-                📁 Название файла репорта.
+                📝 Название файла репорта.
             </label>
             <input
                 type="text"
                 id="name_report_file"
                 name="name report file"
+                placeholder="например: {{ name_report_file }}"
             >
 
-            <button type="submit">Сохранить настройки</button>
+            <button type="submit">Изменить конфигурацию</button>
 
+        </form>
+
+        <form method="post" action="/update-config">
+            <input type="hidden" id="is_default" name="is default" value="Да" hidden>
+            <button type="submit">Установить значения по умолчанию</button>
         </form>
         <button onclick="window.location.href='/directory-analytics/new'">Вернуться к анализу</button>
         <button onclick="window.location.href='/shutdown'">Остановить сервер приложения</button>
