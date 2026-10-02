@@ -34,6 +34,7 @@ from uvicorn import Server as UvicornServer
 from src.app import ApplicationService as app
 from src.config import Config, ServerConfig
 from src.logs import SmartLogger
+from src.utilities import Utilities as uts
 
 # ----------------------------------------------------------------------------#
 # Application code                                                            #
@@ -44,7 +45,9 @@ log: SmartLogger = SmartLogger()
 log.setLevel(cfg.log_level)
 app_report = app.ReportService()
 app_clear = app.ClearReportService()
-templates = Jinja2Templates(directory="src/templates")
+template_renderer = Jinja2Templates(
+    directory=uts.resource_path(relative_path="src/templates")
+)
 sc: ServerConfig = ServerConfig()
 uvicorn_config: UvicornConfig = UvicornConfig(
     f"{__name__}:web",
@@ -113,7 +116,11 @@ web = FastAPI(
     lifespan=lifespan,
 )
 
-web.mount("/static", StaticFiles(directory="src/static"), name="static")
+web.mount(
+    path="/static",
+    app=StaticFiles(directory=uts.resource_path(relative_path="src/static")),
+    name="static",
+)
 
 
 class Browser(str, Enum):
@@ -239,7 +246,7 @@ async def shutdown(request: Request) -> Response:
     uvicorn_server.should_exit = True
     log.info(msg="Запрос на остановку сервера отправлен...", pretty=True)
     if "text/html" in request.headers.get("accept", ""):
-        return templates.TemplateResponse(
+        return template_renderer.TemplateResponse(
             request=request,
             name="shutdown.html",
             status_code=status.HTTP_202_ACCEPTED,
@@ -264,7 +271,7 @@ async def get_cleanup(request: Request) -> Response:
     Returns:
         HTML-страница с формой запуска очистки отчётов.
     """
-    return templates.TemplateResponse(
+    return template_renderer.TemplateResponse(
         request=request,
         name="cleanup.html",
         status_code=status.HTTP_200_OK,
@@ -300,7 +307,7 @@ async def post_cleanup(request: Request) -> Response:
         context = {
             "report": report,
         }
-        return templates.TemplateResponse(
+        return template_renderer.TemplateResponse(
             request=request,
             name="cleanup.html",
             context=context,
@@ -333,6 +340,7 @@ async def get_config(request: Request) -> Response:
         "name_report_file": name_report_file,
         "browser_profile": cfg.path_browser_profile,
     }
+    return template_renderer.TemplateResponse(
         request=request,
         context=context,
         name="config-form.html",
@@ -366,7 +374,11 @@ async def update_config(
     """
     global cfg
     if web_config.is_default == IsYesOrNo.YES:
-        cfg = copy(Config())
+        default_cfg = Config()
+        cfg.browser = default_cfg.browser
+        cfg.bookmarks_folder = default_cfg.bookmarks_folder
+        cfg.custom_name_browser_profile = default_cfg.custom_name_browser_profile
+        cfg.custom_name_report_file = default_cfg.custom_name_report_file
         web_config = WebConfig()
         web_config.is_default = True
     else:
@@ -375,11 +387,12 @@ async def update_config(
             cfg.browser = web_config.browser.value
         if web_config.bookmarks_folder:
             cfg.bookmarks_folder = web_config.bookmarks_folder
-        cfg.browser_profile = web_config.browser_profile
+        if web_config.browser_profile:
+            cfg.custom_name_browser_profile = web_config.browser_profile
         if web_config.custom_report_file:
-            cfg.custom_report_file = web_config.custom_report_file
+            cfg.custom_name_report_file = web_config.custom_report_file
     if "text/html" in request.headers.get("accept", ""):
-        return templates.TemplateResponse(
+        return template_renderer.TemplateResponse(
             request=request,
             name="config-response.html",
             status_code=status.HTTP_200_OK,
@@ -399,6 +412,7 @@ async def new_analytics(request: Request) -> Response:
         HTML-страница с формой параметров поиска.
     """
     context = {"bookmarks_folder": cfg.bookmarks_folder}
+    return template_renderer.TemplateResponse(
         request=request,
         context=context,
         name="directory-analytics-form.html",
@@ -478,7 +492,7 @@ async def get_report(
                 "name_folder": copy_cfg.bookmarks_folder,
                 "err": err,
             }
-            return templates.TemplateResponse(
+            return template_renderer.TemplateResponse(
                 request=request,
                 name="directory-analytics-result.html",
                 context=context,
@@ -498,7 +512,7 @@ async def get_report(
             "name_folder": copy_cfg.bookmarks_folder,
             "report": bookmarks_report,
         }
-        return templates.TemplateResponse(
+        return template_renderer.TemplateResponse(
             request=request,
             name="directory-analytics-result.html",
             context=context,
