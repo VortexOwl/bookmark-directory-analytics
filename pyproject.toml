@@ -13,8 +13,8 @@ dependencies = [
 ]
 
 [project.scripts]
-start = "start:start"
-web = "web.router:web_start"
+console = "start:start_console"
+start = "start:start_web"
 clear = "start:start_clear"
 
 [tool.uv]
