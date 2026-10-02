@@ -32,15 +32,23 @@ class ApplicationService:
             """
             self._cfg = cfg if cfg is not None else Config()
 
-        async def clear_report_directory(self) -> dict[str, int | tuple[str]]:
+        async def cleanup(
+            self, report_files_directory: str | Path | None = None
+        ) -> dict[str, int | tuple[str]]:
             """
-            Удаляет файлы из каталога отчётов.
+            Очищает директорию временных файлов.
+
+            Args:
+                report_files_directory: Директория отчетов. Если не передана,
+                    используется директория отчетов из конфигурации.
 
             Returns:
                 Словарь со статистикой удаления: количеством успешно
                 удалённых файлов и количеством ошибок.
             """
-            return await uts.clearing_folder(clear_folder=self._cfg.report_folder)
+            if report_files_directory is None:
+                report_files_directory = self._cfg.report_folder
+            return await uts.clearing_folder(clear_folder=report_files_directory)
 
     class ReportService:
         """
