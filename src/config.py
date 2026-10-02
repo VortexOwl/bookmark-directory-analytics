@@ -82,7 +82,7 @@ class Config(BaseSettings):
     custom_name_report_file: str | None = None
     database_file: str = "places.sqlite"
     data_folder: str = "data"
-    report_folder: str = "docs"
+    report_folder: str = "report"
 
     @property
     def patch_data_folder(self) -> Path:
