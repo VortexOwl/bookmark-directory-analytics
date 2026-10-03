@@ -2,7 +2,6 @@
 # Embedded libraries                                                          #
 # ----------------------------------------------------------------------------#
 from pathlib import Path
-from shutil import copy2 as shutil_copy2
 
 # ----------------------------------------------------------------------------#
 # Project modules                                                             #
