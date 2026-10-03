@@ -7,7 +7,7 @@ from shutil import copy2 as shutil_copy2
 # ----------------------------------------------------------------------------#
 # Project modules                                                             #
 # ----------------------------------------------------------------------------#
-from src.app.database import BookmarkDatabaseHandler
+from src.app.database import BookmarkDatabaseHandler, DatabaseDeployer
 from src.config import Config
 from src.logs import SmartLogger
 from src.utilities import Utilities as uts
