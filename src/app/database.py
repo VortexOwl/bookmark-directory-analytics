@@ -2,6 +2,7 @@
 # External libraries                                                          #
 # ----------------------------------------------------------------------------#
 from aiosqlite import Connection, connect
+from shutil import copy2 as shutil_copy2
 
 # ----------------------------------------------------------------------------#
 # Project modules                                                             #
@@ -66,7 +67,7 @@ class DatabaseDeployer:
         patch_data_folder: Path = cfg.patch_data_folder
         path_data_file: Path = cfg.path_data_file
 
-        Path.mkdir(patch_data_folder, exist_ok=True)
+        patch_data_folder.mkdir(exist_ok=True)
 
         if path_source_database is None:
             self._log.warning(
