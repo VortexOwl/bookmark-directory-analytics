@@ -8,7 +8,7 @@ build/
 .venv/
 
 # Local project files
-/docs/
+/report/
 /logs/
 /data/
 /git-scripts/
