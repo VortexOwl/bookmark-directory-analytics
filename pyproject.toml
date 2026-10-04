@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-default = "start:start_default_config"
+default = "start:start_default"
 start = "start:start_web"
 clear = "start:start_clear"
 
