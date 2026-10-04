@@ -10,6 +10,7 @@ from utilities.basic_utilities_project import add_workdir_in_PATH
 
 add_workdir_in_PATH()
 from src.app import ApplicationService as app
+from src.web.router import start_web_server
 
 # ----------------------------------------------------------------------------#
 # Application code                                                            #
@@ -19,7 +20,17 @@ app_report = app.ReportService()
 app_clear = app.ClearReportService()
 
 
-def start() -> None:
+def start_web() -> None:
+    """
+    Запускает приложение.
+
+    Notes:
+        Функция инициализирует и запускает веб-сервер приложения.
+    """
+    start_web_server()
+
+
+def start_console() -> None:
     """
     Запускает формирование и сохранение отчёта по закладкам.
 
@@ -39,8 +50,8 @@ def start_clear() -> None:
         очистки директории для хранения отчётов.
     """
 
-    async_run(app_clear.clear_report_directory())
+    async_run(app_clear.cleanup())
 
 
 if __name__ == "__main__":
-    start()
+    start_web()

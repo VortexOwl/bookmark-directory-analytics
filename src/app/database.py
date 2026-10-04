@@ -2,6 +2,7 @@
 # External libraries                                                          #
 # ----------------------------------------------------------------------------#
 from aiosqlite import Connection, connect
+from shutil import copy2 as shutil_copy2
 
 # ----------------------------------------------------------------------------#
 # Project modules                                                             #
@@ -14,9 +15,88 @@ from src.logs import SmartLogger
 # ----------------------------------------------------------------------------#
 
 
-class BookmarksDatabase:
-    """Предоставляет доступ к базе данных закладок."""
+class DatabaseDeployer:
+    """
+    Копирует файл базы данных закладок в директорию проекта.
+    """
+    def __init__(
+            self,
+            cfg: Config | None = None,
+            log: SmartLogger | None = None,
+        ) -> None:
+            """
+            Инициализирует сервис деплоя базы данных закладок.
 
+            Args:
+                cfg: Конфигурация приложения. Если не передана,
+                    используется конфигурация по умолчанию.
+                log: Логгер приложения. Если не передан,
+                    создаётся новый экземпляр.
+            """
+            self._cfg = cfg if cfg is not None else Config()
+            self._log = log if log is not None else SmartLogger()
+
+    def _get_db_missing_error(self) -> str:
+        """
+        Формирует сообщение об отсутствии файла базы данных закладок.
+
+        Returns:
+            Сообщение об ошибке отсутствующего файла базы данных.
+        """
+        err = "По указанному пути отсутствует файл базы данных закладок."
+        self._log.error(msg=err, pretty=True)
+        return err
+
+    def prepare_db_file(self, cfg: Config | None = None) -> str | None:
+        """
+        Проверяет наличие базы данных закладок и копирует её в папку данных.
+
+        Args:
+            cfg: Конфигурация приложения. Если не передана,
+                используется конфигурация сервиса.
+
+        Returns:
+            Сообщение об ошибке, если файл базы данных не найден
+            или копирование завершилось с ошибкой. В случае успеха
+            возвращается `None`.
+        """
+        if cfg is None:
+            cfg = self._cfg
+
+        path_source_database: Path | None = cfg.path_source_database
+        patch_data_folder: Path = cfg.patch_data_folder
+        path_data_file: Path = cfg.path_data_file
+
+        patch_data_folder.mkdir(exist_ok=True)
+
+        if path_source_database is None:
+            self._log.warning(
+                msg="Указан пустой путь для базы данных закладок.", pretty=True
+            )
+            if not (path_data_file).is_file():
+                return self._get_db_missing_error()
+            self._log.info(
+                msg="Проверяется старый файл базы данных закладок.", pretty=True
+            )
+        else:
+            try:
+                shutil_copy2(path_source_database, path_data_file)
+            except FileNotFoundError:
+                return self._get_db_missing_error()
+            except Exception as err:
+                err_msg: str = (
+                    f"Произошла ошибка при копировании: {path_source_database}. "
+                    f"Ошибка: {type(err)} {err}"
+                )
+                self._log.error(msg=err_msg, pretty=True)
+                return err_msg
+        return None
+
+
+class BookmarkDatabaseHandler:
+    """
+    Предоставляет доступ к базе данных закладок.
+    """
     def __init__(
         self, log: SmartLogger | None = None, cfg: Config | None = None
     ) -> None:

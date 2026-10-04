@@ -8,9 +8,6 @@ from contextlib import asynccontextmanager
 from copy import copy
 from enum import Enum
 from json import dumps as json_dumps
-from os import getpid as os_getpid
-from os import kill as os_kill
-from signal import SIGINT as signal_SIGINT
 from typing import Annotated
 from webbrowser import open as web_open
 
@@ -28,7 +25,8 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from uvicorn import run as uvicorn_run
+from uvicorn import Config as UvicornConfig
+from uvicorn import Server as UvicornServer
 
 # ----------------------------------------------------------------------------#
 # Project modules                                                             #
@@ -36,6 +34,7 @@ from uvicorn import run as uvicorn_run
 from src.app import ApplicationService as app
 from src.config import Config, ServerConfig
 from src.logs import SmartLogger
+from src.utilities import Utilities as uts
 
 # ----------------------------------------------------------------------------#
 # Application code                                                            #
@@ -46,7 +45,18 @@ log: SmartLogger = SmartLogger()
 log.setLevel(cfg.log_level)
 app_report = app.ReportService()
 app_clear = app.ClearReportService()
-templates = Jinja2Templates(directory="src/templates")
+template_renderer = Jinja2Templates(
+    directory=uts.resource_path(relative_path="src/templates")
+)
+sc: ServerConfig = ServerConfig()
+uvicorn_config: UvicornConfig = UvicornConfig(
+    f"{__name__}:web",
+    host=sc.host,
+    port=sc.port,
+    reload=sc.is_reload,
+    access_log=sc.access_log,
+)
+uvicorn_server: UvicornServer = UvicornServer(uvicorn_config)
 
 
 async def open_browser() -> None:
@@ -54,7 +64,10 @@ async def open_browser() -> None:
     Открывает веб-интерфейс приложения в браузере.
 
     Функция ожидает запуска сервера, после чего открывает URL приложения
-    в системном браузере. Используется только при запуске не в Docker-контейнере.
+    в системном браузере.
+
+    Notes:
+        Используется только при запуске вне Docker-контейнера.
     """
     sc = ServerConfig()
     await a_sleep(1.5)
@@ -63,7 +76,7 @@ async def open_browser() -> None:
 
 
 @asynccontextmanager
-async def lifespan(web: FastAPI) -> None:
+async def lifespan(web: FastAPI):
     """
     Управляет жизненным циклом FastAPI-приложения.
 
@@ -103,7 +116,11 @@ web = FastAPI(
     lifespan=lifespan,
 )
 
-web.mount("/static", StaticFiles(directory="src/static"), name="static")
+web.mount(
+    path="/static",
+    app=StaticFiles(directory=uts.resource_path(relative_path="src/static")),
+    name="static",
+)
 
 
 class Browser(str, Enum):
@@ -119,8 +136,8 @@ class IsYesOrNo(str, Enum):
     Перечисление вариантов ответа «да» или «нет».
     """
 
-    YES = "✔️ Да"
-    NO = "❌ Нет"
+    YES = "Да"
+    NO = "Нет"
 
 
 class WebConfig(BaseModel):
@@ -139,25 +156,17 @@ class WebConfig(BaseModel):
     bookmarks_folder: str | None = None
     browser_profile: str | None = None
     custom_report_file: str | None = None
-    is_default: IsYesOrNo | bool = IsYesOrNo.NO
+    is_default: IsYesOrNo = IsYesOrNo.NO
 
     @classmethod
     async def web_config_form(
         cls,
-        is_default: Annotated[
-            IsYesOrNo,
-            Form(
-                alias="is default",
-                description="📜 Установить значения по умолчанию",
-                examples=[IsYesOrNo.NO],
-            ),
-        ],
         browser: Annotated[
             Browser,
             Form(alias="browser", description="🌎 Браузер", examples=[Browser.FLOORP]),
-        ],
+        ] = Browser.FLOORP,
         bookmarks_folder: Annotated[
-            str,
+            str | None,
             Form(
                 alias="bookmarks folder",
                 description="🏙️ Директория закладок",
@@ -165,7 +174,7 @@ class WebConfig(BaseModel):
             ),
         ] = None,
         browser_profile: Annotated[
-            str,
+            str | None,
             Form(
                 alias="custom browser profile",
                 description="🪪 Кастомный профиль браузера",
@@ -173,13 +182,14 @@ class WebConfig(BaseModel):
             ),
         ] = None,
         custom_report_file: Annotated[
-            str,
+            str | None,
             Form(
                 alias="name report file",
                 description="📁 Название файла репорта",
                 examples=[""],
             ),
         ] = None,
+        is_default: Annotated[IsYesOrNo, Form(alias="is default")] = IsYesOrNo.NO,
     ) -> WebConfig:
         """
         Создаёт конфигурацию из данных HTML-формы.
@@ -199,7 +209,7 @@ class WebConfig(BaseModel):
             bookmarks_folder=bookmarks_folder,
             browser_profile=browser_profile,
             custom_report_file=custom_report_file,
-            is_default=is_default,
+            is_default=is_default or IsYesOrNo.NO,
         )
 
 
@@ -233,10 +243,10 @@ async def shutdown(request: Request) -> Response:
     Returns:
         HTML-страница или JSON-ответ с подтверждением отправки сигнала.
     """
-    os_kill(os_getpid(), signal_SIGINT)
+    uvicorn_server.should_exit = True
     log.info(msg="Запрос на остановку сервера отправлен...", pretty=True)
     if "text/html" in request.headers.get("accept", ""):
-        return templates.TemplateResponse(
+        return template_renderer.TemplateResponse(
             request=request,
             name="shutdown.html",
             status_code=status.HTTP_202_ACCEPTED,
@@ -261,7 +271,7 @@ async def get_cleanup(request: Request) -> Response:
     Returns:
         HTML-страница с формой запуска очистки отчётов.
     """
-    return templates.TemplateResponse(
+    return template_renderer.TemplateResponse(
         request=request,
         name="cleanup.html",
         status_code=status.HTTP_200_OK,
@@ -286,13 +296,18 @@ async def post_cleanup(request: Request) -> Response:
         HTML-страница с отчётом об очистке или JSON-ответ со сводкой
         операции.
     """
-    report = await app_clear.clear_report_directory()
+    path_report_folder = cfg.path_report_folder
+    if path_report_folder.exists():
+        report = await app_clear.cleanup()
+    else:
+        report = {"success": 0, "errors": 0, "names of errors": ()}
+        log.debug(msg=f"Сводка выполнения очистки:\n{report}", pretty=True)
     if "text/html" in request.headers.get("accept", ""):
         report["pretty json"] = json_dumps(report, indent=2, ensure_ascii=False)
         context = {
             "report": report,
         }
-        return templates.TemplateResponse(
+        return template_renderer.TemplateResponse(
             request=request,
             name="cleanup.html",
             context=context,
@@ -308,7 +323,7 @@ async def post_cleanup(request: Request) -> Response:
     )
 
 
-@web.get("/config", include_in_schema=False)
+@web.get("/update-config", include_in_schema=False)
 async def get_config(request: Request) -> Response:
     """
      Отображает HTML-форму конфигурации сервиса анализа директории закладок.
@@ -319,20 +334,27 @@ async def get_config(request: Request) -> Response:
     Returns:
         HTML-страница с формой конфигурации анализа директории закладок.
     """
-    return templates.TemplateResponse(
+    name_report_file = cfg.custom_name_report_file or cfg.name_report_file
+    context = {
+        "bookmarks_folder": cfg.bookmarks_folder,
+        "name_report_file": name_report_file,
+        "browser_profile": cfg.path_browser_profile,
+    }
+    return template_renderer.TemplateResponse(
         request=request,
+        context=context,
         name="config-form.html",
         status_code=status.HTTP_200_OK,
     )
 
 
 @web.post(
-    "/config",
+    "/update-config",
     description="Задает конфигурацию для утилиты анализа закладок браузера.",
     tags=["⚙️ Конфигурация"],
     summary="Задать конфигурацию",
 )
-async def post_config(
+async def update_config(
     request: Request,
     web_config: Annotated[WebConfig, Depends(WebConfig.web_config_form)],
 ) -> Response:
@@ -350,22 +372,38 @@ async def post_config(
     Returns:
         HTML-страница с результатом сохранения или JSON-ответ с конфигурацией.
     """
-    global cfg
     if web_config.is_default == IsYesOrNo.YES:
-        cfg = copy(Config())
+        default_cfg = Config()
+        cfg.browser = default_cfg.browser
+        cfg.bookmarks_folder = default_cfg.bookmarks_folder
+        cfg.custom_name_browser_profile = default_cfg.custom_name_browser_profile
+        cfg.custom_name_report_file = default_cfg.custom_name_report_file
         web_config = WebConfig()
-        web_config.is_default = True
+        log.info(msg="Установлены настройки по умолчанию", pretty=True)
     else:
-        web_config.is_default = False
         if web_config.browser:
             cfg.browser = web_config.browser.value
+            log.info(msg=f'Выбран браузер "{web_config.browser.value}".', pretty=True)
         if web_config.bookmarks_folder:
             cfg.bookmarks_folder = web_config.bookmarks_folder
-        cfg.browser_profile = web_config.browser_profile
+            log.info(
+                msg=f'Выбрана папка закладок "{web_config.bookmarks_folder}".',
+                pretty=True,
+            )
+        if web_config.browser_profile:
+            cfg.custom_name_browser_profile = web_config.browser_profile
+            log.info(
+                msg=f'Установлен профиль браузера "{web_config.browser_profile}".',
+                pretty=True,
+            )
         if web_config.custom_report_file:
-            cfg.custom_report_file = web_config.custom_report_file
+            cfg.custom_name_report_file = web_config.custom_report_file
+            log.info(
+                msg=f'Для файла отчета установлено название "{web_config.custom_report_file}".',
+                pretty=True,
+            )
     if "text/html" in request.headers.get("accept", ""):
-        return templates.TemplateResponse(
+        return template_renderer.TemplateResponse(
             request=request,
             name="config-response.html",
             status_code=status.HTTP_200_OK,
@@ -384,8 +422,10 @@ async def new_analytics(request: Request) -> Response:
     Returns:
         HTML-страница с формой параметров поиска.
     """
-    return templates.TemplateResponse(
+    context = {"bookmarks_folder": cfg.bookmarks_folder}
+    return template_renderer.TemplateResponse(
         request=request,
+        context=context,
         name="directory-analytics-form.html",
         status_code=status.HTTP_200_OK,
     )
@@ -408,7 +448,7 @@ async def get_report(
         ),
     ],
     bookmarks_folder: Annotated[
-        str,
+        str | None,
         Query(
             alias="bookmarks folder",
             description="🏙️ Директория закладок",
@@ -442,7 +482,6 @@ async def get_report(
 
     if bookmarks_folder:
         copy_cfg.bookmarks_folder = bookmarks_folder
-        copy_cfg.custom_report_file = None
 
     log.info(
         msg=f"Начат анализ закладок браузера в папке: {copy_cfg.bookmarks_folder}.",
@@ -463,7 +502,7 @@ async def get_report(
                 "name_folder": copy_cfg.bookmarks_folder,
                 "err": err,
             }
-            return templates.TemplateResponse(
+            return template_renderer.TemplateResponse(
                 request=request,
                 name="directory-analytics-result.html",
                 context=context,
@@ -483,7 +522,7 @@ async def get_report(
             "name_folder": copy_cfg.bookmarks_folder,
             "report": bookmarks_report,
         }
-        return templates.TemplateResponse(
+        return template_renderer.TemplateResponse(
             request=request,
             name="directory-analytics-result.html",
             context=context,
@@ -492,16 +531,20 @@ async def get_report(
     return PlainTextResponse(content=bookmarks_report, status_code=status.HTTP_200_OK)
 
 
-def web_start() -> None:
+def start_web_server() -> None:
     """
     Запускает FastAPI-приложение с помощью Uvicorn.
 
-    Параметры хоста, порта и режима перезагрузки считываются
-    из конфигурации приложения.
+    Параметры хоста, порта, режима перезагрузки и журнала доступа
+    считываются из конфигурации приложения.
     """
-    sc = ServerConfig()
-    uvicorn_run(f"{__name__}:web", host=sc.host, port=sc.port, reload=sc.is_reload)
+    try:
+        uvicorn_server.run()
+    except KeyboardInterrupt:
+        log.debug(
+            "🛑 Сервер остановлен пользователем через `Ctrl+Shift+C`.", pretty=True
+        )
 
 
 if __name__ == "__main__":
-    web_start()
+    start_web_server()

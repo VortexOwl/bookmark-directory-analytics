@@ -1,6 +1,7 @@
 # ----------------------------------------------------------------------------#
 # Embedded libraries                                                          #
 # ----------------------------------------------------------------------------#
+import sys
 from asyncio import to_thread as asyncio_to_thread
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -23,18 +24,34 @@ class Utilities:
     @staticmethod
     def read_file_line_by_line(file_path: Path, encoding="utf-8") -> Iterator[str]:
         """
-        Читает файл построчно передавая в буфер данные по одной строке.
-        Полезен при файлах большого объема.
+        Читает файл построчно, передавая данные в буфер по одной строке.
+
+        Полезен при обработке файлов большого объёма.
+
+        Args:
+            file_path: Путь к файлу для чтения.
+            encoding: Кодировка файла.
+
+        Yields:
+            Очередную строку файла без пробельных символов по краям.
         """
         with file_path.open("r", encoding=encoding) as file:
             for line in file:
                 yield line.strip()
 
     @classmethod
-    async def clearing_folder(cls, clear_folder: str) -> dict[str, int | tuple[str]]:
+    async def clearing_folder(
+        cls, clear_folder: str | Path
+    ) -> dict[str, int | tuple[str]]:
         """
         Асинхронно и безопасно очищает папку от файлов.
-        Возвращает статистику по успешным удалениям и ошибкам.
+
+        Args:
+            clear_folder: Путь к папке, которую необходимо очистить.
+
+        Returns:
+            Статистика выполнения очистки. Содержит количество успешно
+            удалённых файлов, количество ошибок и имена ошибок.
         """
         path_clear_folder = Path.cwd() / clear_folder
 
@@ -74,3 +91,22 @@ class Utilities:
         )
         cls._log.debug(msg=f"Сводка выполнения очистки:\n{stats}", pretty=True)
         return stats
+
+    @staticmethod
+    def resource_path(relative_path: str | Path) -> Path:
+        """
+        Возвращает абсолютный путь к ресурсу приложения.
+
+        Args:
+            relative_path: Относительный путь к ресурсу от корневой
+                директории проекта или каталога собранного приложения.
+
+        Returns:
+            Абсолютный путь к ресурсу.
+        """
+        if getattr(sys, "frozen", False):
+            base_path = Path(sys._MEIPASS)
+        else:
+            base_path = Path(__file__).resolve().parents[2]
+
+        return base_path / relative_path
