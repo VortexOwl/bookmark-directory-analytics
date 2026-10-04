@@ -30,7 +30,7 @@ def start_web() -> None:
     start_web_server()
 
 
-def start_console() -> None:
+def start_default_config() -> None:
     """
     Запускает формирование и сохранение отчёта по закладкам.
 
