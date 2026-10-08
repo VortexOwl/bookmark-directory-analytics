@@ -26,6 +26,7 @@ class ServerConfig(BaseSettings):
         is_reload: Включает автоматическую перезагрузку сервера.
         access_log: Включает журналирование запросов.
     """
+
     model_config = SettingsConfigDict(env_prefix="SERVER_")
     host: str = "127.0.0.1"
     port: int = 8000
@@ -71,6 +72,7 @@ class Config(BaseSettings):
         data_folder: Название каталога для данных приложения.
         report_folder: Название каталога для отчётов.
     """
+
     model_config = SettingsConfigDict(env_prefix="APP_")
     log_level: int = 20 if getattr(sys, "frozen", False) else 10
     is_open_webbrowser: bool = True
