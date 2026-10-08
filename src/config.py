@@ -72,7 +72,7 @@ class Config(BaseSettings):
         report_folder: Название каталога для отчётов.
     """
     model_config = SettingsConfigDict(env_prefix="APP_")
-    log_level: int = 10
+    log_level: int = 20 if getattr(sys, "frozen", False) else 10
     is_open_webbrowser: bool = True
     _default_profile_pattern: str = "*.default*"
     bookmarks_folder: str = "KDE Store"
