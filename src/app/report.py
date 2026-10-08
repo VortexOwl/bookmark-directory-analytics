@@ -21,6 +21,7 @@ class ApplicationService:
         """
         Очищает директорию для хранения отчетов от файлов.
         """
+
         def __init__(self, cfg: Config | None = None):
             """
             Инициализирует сервис удаления отчётов.
@@ -53,6 +54,7 @@ class ApplicationService:
         """
         Формирует отчёты по закладкам.
         """
+
         def __init__(
             self,
             bdh: BookmarkDatabaseHandler | None = None,

@@ -1,8 +1,13 @@
 # ----------------------------------------------------------------------------#
+# Embedded libraries                                                          #
+# ----------------------------------------------------------------------------#
+from pathlib import Path
+from shutil import copy2 as shutil_copy2
+
+# ----------------------------------------------------------------------------#
 # External libraries                                                          #
 # ----------------------------------------------------------------------------#
 from aiosqlite import Connection, connect
-from shutil import copy2 as shutil_copy2
 
 # ----------------------------------------------------------------------------#
 # Project modules                                                             #
@@ -19,22 +24,23 @@ class DatabaseDeployer:
     """
     Копирует файл базы данных закладок в директорию проекта.
     """
-    def __init__(
-            self,
-            cfg: Config | None = None,
-            log: SmartLogger | None = None,
-        ) -> None:
-            """
-            Инициализирует сервис деплоя базы данных закладок.
 
-            Args:
-                cfg: Конфигурация приложения. Если не передана,
-                    используется конфигурация по умолчанию.
-                log: Логгер приложения. Если не передан,
-                    создаётся новый экземпляр.
-            """
-            self._cfg = cfg if cfg is not None else Config()
-            self._log = log if log is not None else SmartLogger()
+    def __init__(
+        self,
+        cfg: Config | None = None,
+        log: SmartLogger | None = None,
+    ) -> None:
+        """
+        Инициализирует сервис деплоя базы данных закладок.
+
+        Args:
+            cfg: Конфигурация приложения. Если не передана,
+                используется конфигурация по умолчанию.
+            log: Логгер приложения. Если не передан,
+                создаётся новый экземпляр.
+        """
+        self._cfg = cfg if cfg is not None else Config()
+        self._log = log if log is not None else SmartLogger()
 
     def _get_db_missing_error(self) -> str:
         """
@@ -97,6 +103,7 @@ class BookmarkDatabaseHandler:
     """
     Предоставляет доступ к базе данных закладок.
     """
+
     def __init__(
         self, log: SmartLogger | None = None, cfg: Config | None = None
     ) -> None:
