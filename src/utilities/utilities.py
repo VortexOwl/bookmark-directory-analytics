@@ -107,9 +107,9 @@ class Utilities:
         await asyncio_gather(*(_process(entry) for entry in entries))
 
         stats["names of errors"] = tuple(names_err)
-        cls._log.debug(
+        cls._log.info(
             msg=(
-                f"В директории {clear_folder} удалены: "
+                f"В директории {clear_folder} очищены: "
                 f"{'файлы' if remove_files else ''}"
                 f"{' и ' if remove_files and remove_subfolders else ''}"
                 f"{'подпапки' if remove_subfolders else ''}."

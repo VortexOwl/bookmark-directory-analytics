@@ -541,7 +541,7 @@ def start_web_server() -> None:
     try:
         uvicorn_server.run()
     except KeyboardInterrupt:
-        log.debug("🛑 Сервер остановлен пользователем через `Ctrl+C`.", pretty=True)
+        log.info("🛑 Сервер остановлен пользователем через `Ctrl+C`.", pretty=True)
 
 
 if __name__ == "__main__":
